@@ -1,0 +1,69 @@
+# Bot mode:
+# - tv_master  : TradingView webhook is master (Mode A)
+# - mt5_master : MT5 feed + Python parity engine is master (Mode B)
+mode: tv_master
+
+paper: true                 # true = no real orders; logs only
+
+tv_bridge:
+  enabled: true
+  host: 0.0.0.0
+  port: 9001
+  path: /tv
+  secret: "9a834ab0629a7e2193cab2bfe91760faa3adebaf0d9b200bcb114cc183b30c93"
+  require_tf_match: true
+
+mt5:
+  login: 5044713315                  # <-- put your MT5 login number
+  password: "Nv!7JmHx"              # <-- put your password
+  server: "MetaQuotes-Demo"                # e.g. "FXPesa-Demo"
+  path: ""                  # optional explicit path to terminal64.exe on Windows
+
+# Trading timeframe for MT5-master parity mode (Mode B)
+# Example: "M15", "H1"
+timeframe: M1
+
+# TradingView "tf" normalization expected (for Mode A tf match)
+# Example: "15m", "1h"
+expected_tv_tf: "15m"
+
+# Symbol mapping (TV/Binance -> MT5 symbol)
+# e.g. "BTCUSDT": "BTCUSD", "NAS100": "US100.cash"
+symbol_map: {}
+
+symbols:
+  - XAUUSD
+  - XAGUSD
+
+strategy:
+  donLen: 120
+  pivotLen: 5
+  oscLen: 14
+  extBandPct: 0.15
+
+  tradeAllDivergences: true
+
+  longOnly: true
+  entryMode: "Confirm"         # Raw | Confirm
+  minDivStrength: 15.0
+  cooldownBars: 0
+
+  useCvdGate: true
+  cvdLenMin: 60
+
+  useDynamicCvdPct: true
+  cvdLookbackBars: 2880
+  cvdPct: 75
+  cvdThreshold: 244.075
+
+  useBOSConfirm: true
+  bosAtrBuffer: 0.10
+  maxWaitBars: 30
+
+risk:
+  lot: 0.01
+  sl_atr_mult: 1.5
+  tp_atr_mult: 3.0
+  deviation: 20
+  magic: 260110
+  comment: "TV/MT5 PineParity LONG"
