@@ -7,21 +7,21 @@ paper: true                 # true = no real orders; logs only
 
 tv_bridge:
   enabled: true
-  host: 0.0.0.0
+  host: 127.0.0.1
   port: 9001
   path: /tv
   secret: "9a834ab0629a7e2193cab2bfe91760faa3adebaf0d9b200bcb114cc183b30c93"
   require_tf_match: true
 
 mt5:
-  login: 5044713315                  # <-- put your MT5 login number
-  password: "Nv!7JmHx"              # <-- put your password
-  server: "MetaQuotes-Demo"                # e.g. "FXPesa-Demo"
-  path: ""                  # optional explicit path to terminal64.exe on Windows
+  login: 1061523                  # <-- put your MT5 login number
+  password: "11230428018Fx!"              # <-- put your password
+  server: "EGMSecurities-Demo"                # e.g. "FXPesa-Demo"
+  path: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"                  # optional explicit path to terminal64.exe on Windows
 
 # Trading timeframe for MT5-master parity mode (Mode B)
 # Example: "M15", "H1"
-timeframe: M1
+timeframe: M15
 
 # TradingView "tf" normalization expected (for Mode A tf match)
 # Example: "15m", "1h"
@@ -29,9 +29,21 @@ expected_tv_tf: "15m"
 
 # Symbol mapping (TV/Binance -> MT5 symbol)
 # e.g. "BTCUSDT": "BTCUSD", "NAS100": "US100.cash"
-symbol_map: {}
+symbol_map:
+  # TradingView symbols map to MT5 .lv symbols for execution.
+  BTCUSDT: BTCUSD.lv
+  BTCUSD.p: BTCUSD.lv
+  ETHUSDT: ETHUSD.lv
+  ETHUSD.p: ETHUSD.lv
+  SOLUSDT: SOLUSD.lv
+  SOLUSD.p: SOLUSD.lv
+  XAUUSD: XAUUSD
+  XAGUSD: XAGUSD
 
 symbols:
+  - BTCUSD.lv
+  - ETHUSD.lv
+  - SOLUSD.lv
   - XAUUSD
   - XAGUSD
 

@@ -8,6 +8,7 @@ import pandas as pd
 from .mt5_bridge import MT5Bridge
 from .strategy_engine import PineParityEngine, Signal
 from .timeframes import mt5_tf, tf_seconds
+from .utils.time_utils import now_ms, ms_to_iso
 from .utils.logger import setup_logger
 
 log = setup_logger("mt5_feed")
@@ -24,8 +25,38 @@ class MT5FeedRunner:
         self.tf_sec = tf_seconds(self.timeframe)
         self.last_bar_time: Dict[str, int] = {}
 
+        # --- stale feed diagnostics ---
+        self.last_bar_close_ms: Dict[str, int] = {}
+        self.last_stale_warn_ms: Dict[str, int] = {}
+        self.stale_threshold_ms = 30 * 60 * 1000
+        self.stale_warn_every_ms = 5 * 60 * 1000
+
     def _bar_close_ms_from_open_sec(self, open_sec: int) -> int:
         return int((open_sec + self.tf_sec) * 1000)
+
+    def _stale_check(self, symbols) -> None:
+        now = now_ms()
+        for sym in symbols:
+            last_close = self.last_bar_close_ms.get(sym)
+            if last_close is None:
+                continue
+
+            age_ms = now - last_close
+            if age_ms <= self.stale_threshold_ms:
+                continue
+
+            last_warn = self.last_stale_warn_ms.get(sym, 0)
+            if now - last_warn < self.stale_warn_every_ms:
+                continue
+
+            self.last_stale_warn_ms[sym] = now
+            age_min = age_ms / 60000.0
+            thr_min = self.stale_threshold_ms / 60000.0
+            log.warning(
+                f"STALE_FEED symbol={sym} tf={self.timeframe} "
+                f"last_close={ms_to_iso(last_close)} age_min={age_min:.1f} "
+                f"(no new bars for >{thr_min:.0f}m)"
+            )
 
     def poll_symbol(self, symbol: str, tf_bars: int = 600, m1_bars: int = 3000) -> Optional[Signal]:
         rates_tf = self.bridge.copy_rates(symbol, self.tf, tf_bars)
@@ -57,6 +88,7 @@ class MT5FeedRunner:
             return None
 
         close_ms = self._bar_close_ms_from_open_sec(open_sec)
+        self.last_bar_close_ms[symbol] = close_ms
         sig = self.engine.on_tf_bar_close(symbol=symbol, df_tf=df_tf_closed, df_1m=df_1m, bar_close_ms=close_ms)
         if sig:
             log.info(
@@ -75,4 +107,5 @@ class MT5FeedRunner:
                         on_signal(sig)
                 except Exception as e:
                     log.error(f"poll error symbol={sym}: {e}")
+            self._stale_check(symbols)
             time.sleep(poll_seconds)
