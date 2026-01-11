@@ -7,6 +7,7 @@ import pandas as pd
 
 from .mt5_bridge import MT5Bridge
 from .strategy_engine import PineParityEngine, Signal
+from .telegram_notify import TelegramNotifier
 from .timeframes import mt5_tf, tf_seconds
 from .utils.time_utils import now_ms, ms_to_iso
 from .utils.logger import setup_logger
@@ -17,13 +18,22 @@ def _rates_to_df(rates) -> pd.DataFrame:
     return pd.DataFrame(rates)
 
 class MT5FeedRunner:
-    def __init__(self, bridge: MT5Bridge, engine: PineParityEngine, timeframe: str):
+    def __init__(
+        self,
+        bridge: MT5Bridge,
+        engine: PineParityEngine,
+        timeframe: str,
+        notifier: Optional[TelegramNotifier] = None,
+        notify_stale: bool = False,
+    ):
         self.bridge = bridge
         self.engine = engine
         self.timeframe = timeframe.upper()
         self.tf = mt5_tf(self.timeframe)
         self.tf_sec = tf_seconds(self.timeframe)
         self.last_bar_time: Dict[str, int] = {}
+        self.notifier = notifier
+        self.notify_stale = notify_stale
 
         # --- stale feed diagnostics ---
         self.last_bar_close_ms: Dict[str, int] = {}
@@ -57,6 +67,13 @@ class MT5FeedRunner:
                 f"last_close={ms_to_iso(last_close)} age_min={age_min:.1f} "
                 f"(no new bars for >{thr_min:.0f}m)"
             )
+            if self.notify_stale and self.notifier and self.notifier.cfg.notify_stale_feed:
+                msg = (
+                    f"STALE_FEED symbol={sym} tf={self.timeframe} "
+                    f"last_close={ms_to_iso(last_close)} age_min={age_min:.1f} "
+                    f"(no new bars for >{thr_min:.0f}m)"
+                )
+                self.notifier.send(msg, key=f"stale:{sym}")
 
     def poll_symbol(self, symbol: str, tf_bars: int = 600, m1_bars: int = 3000) -> Optional[Signal]:
         rates_tf = self.bridge.copy_rates(symbol, self.tf, tf_bars)

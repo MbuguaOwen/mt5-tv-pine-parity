@@ -105,3 +105,22 @@ class MT5Bridge:
         if rates is None:
             raise RuntimeError(f"copy_rates_from_pos failed for {symbol} tf={timeframe}")
         return rates
+
+    def order_calc_profit(self, order_type: int, symbol: str, lot: float, price_open: float, price_close: float) -> float:
+        self.ensure_symbol(symbol)
+        val = mt5.order_calc_profit(order_type, symbol, float(lot), float(price_open), float(price_close))
+        if val is None:
+            raise RuntimeError(f"order_calc_profit failed for {symbol}")
+        return float(val)
+
+    def has_open_position(self, symbol: str, magic: int) -> bool:
+        pos = mt5.positions_get(symbol=symbol)
+        if not pos:
+            return False
+        for p in pos:
+            try:
+                if int(getattr(p, "magic", 0)) == int(magic) and str(getattr(p, "symbol", "")) == symbol:
+                    return True
+            except Exception:
+                continue
+        return False

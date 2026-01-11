@@ -2,6 +2,13 @@ from __future__ import annotations
 
 import MetaTrader5 as mt5
 
+_UNIT_MAP = {
+    "M": "M",
+    "H": "H",
+    "D": "D",
+    "W": "W",
+}
+
 TF_MAP = {
     "M1": mt5.TIMEFRAME_M1,
     "M2": mt5.TIMEFRAME_M2,
@@ -50,14 +57,41 @@ TF_SECONDS = {
     "MN1": 2592000,  # approximate
 }
 
+def _normalize_mt5_key(tf: str) -> str:
+    s = tf.strip().upper()
+    if s in TF_MAP:
+        return s
+    if len(s) >= 2 and s[-1] in _UNIT_MAP and s[:-1].isdigit():
+        unit = _UNIT_MAP[s[-1]]
+        return f"{unit}{int(s[:-1])}"
+    raise ValueError(f"Unsupported timeframe: {tf}")
+
 def mt5_tf(tf: str) -> int:
-    tf = tf.upper()
-    if tf not in TF_MAP:
+    key = _normalize_mt5_key(tf)
+    if key not in TF_MAP:
         raise ValueError(f"Unsupported timeframe: {tf}")
-    return TF_MAP[tf]
+    return TF_MAP[key]
 
 def tf_seconds(tf: str) -> int:
-    tf = tf.upper()
-    if tf not in TF_SECONDS:
+    key = _normalize_mt5_key(tf)
+    if key not in TF_SECONDS:
         raise ValueError(f"Unsupported timeframe: {tf}")
-    return TF_SECONDS[tf]
+    return TF_SECONDS[key]
+
+def to_binance_interval(tf: str) -> str:
+    s = tf.strip()
+    if not s:
+        raise ValueError("timeframe is required")
+    s_upper = s.upper()
+    if s_upper in TF_MAP:
+        if s_upper.startswith("M"):
+            return f"{int(s_upper[1:])}m"
+        if s_upper.startswith("H"):
+            return f"{int(s_upper[1:])}h"
+        if s_upper.startswith("D"):
+            return f"{int(s_upper[1:])}d"
+        if s_upper.startswith("W"):
+            return f"{int(s_upper[1:])}w"
+    if s[-1].lower() in ("m", "h", "d", "w") and s[:-1].isdigit():
+        return f"{int(s[:-1])}{s[-1].lower()}"
+    raise ValueError(f"Unsupported binance timeframe: {tf}")

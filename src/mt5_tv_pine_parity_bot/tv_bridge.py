@@ -69,29 +69,41 @@ async def start_server(
     require_tf_match: bool,
     expected_tf: Optional[str],
     on_signal: Callable[[TVSignal], Awaitable[None]],
+    on_reject: Optional[Callable[[str, Dict[str, Any], str], Awaitable[None]]] = None,
 ) -> web.AppRunner:
     app = web.Application()
 
     async def handler(request: web.Request) -> web.Response:
+        async def reject(reason: str, status: int, payload: Optional[Dict[str, Any]] = None, extra: Optional[Dict[str, Any]] = None):
+            if on_reject is not None:
+                try:
+                    await on_reject(reason, payload or {}, request.remote or "")
+                except Exception as e:
+                    log.error(f"reject handler failed: {e}")
+            body = {"ok": False, "error": reason}
+            if extra:
+                body.update(extra)
+            return web.json_response(body, status=status)
+
         if request.method != "POST":
-            return web.json_response({"ok": False, "error": "method_not_allowed"}, status=405)
+            return await reject("method_not_allowed", 405)
         try:
             payload = await request.json()
         except Exception:
-            return web.json_response({"ok": False, "error": "invalid_json"}, status=400)
+            return await reject("invalid_json", 400)
         if not isinstance(payload, dict):
-            return web.json_response({"ok": False, "error": "invalid_payload"}, status=400)
+            return await reject("invalid_payload", 400)
 
         sig = parse_tv_signal(payload)
         if not sig.secret or sig.secret != secret:
-            return web.json_response({"ok": False, "error": "bad_secret"}, status=401)
+            return await reject("bad_secret", 401, payload=payload)
         if sig.side != "LONG":
-            return web.json_response({"ok": False, "error": "side_not_supported"}, status=400)
+            return await reject("side_not_supported", 400, payload=payload)
 
         if require_tf_match and expected_tf and sig.tf and sig.tf != expected_tf:
-            return web.json_response({"ok": False, "error": "tf_mismatch", "got": sig.tf, "expected": expected_tf}, status=400)
+            return await reject("tf_mismatch", 400, payload=payload, extra={"got": sig.tf, "expected": expected_tf})
         if require_tf_match and expected_tf and not sig.tf:
-            return web.json_response({"ok": False, "error": "missing_tf"}, status=400)
+            return await reject("missing_tf", 400, payload=payload)
 
         await on_signal(sig)
         return web.json_response({"ok": True})

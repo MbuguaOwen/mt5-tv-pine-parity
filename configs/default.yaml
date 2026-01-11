@@ -1,9 +1,9 @@
 # Bot mode:
-# - tv_master  : TradingView webhook is master (Mode A)
-# - mt5_master : MT5 feed + Python parity engine is master (Mode B)
-mode: tv_master
+# - tv_master       : TradingView webhook is master (Mode A)
+# - binance_master  : Binance candles are master (Mode B)
+mode: binance_master
 
-paper: true                 # true = no real orders; logs only
+paper: true
 
 tv_bridge:
   enabled: true
@@ -14,38 +14,41 @@ tv_bridge:
   require_tf_match: true
 
 mt5:
-  login: 1061523                  # <-- put your MT5 login number
-  password: "11230428018Fx!"              # <-- put your password
-  server: "EGMSecurities-Demo"                # e.g. "FXPesa-Demo"
-  path: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"                  # optional explicit path to terminal64.exe on Windows
+  login: 1061523
+  password: "11230428018Fx!"
+  server: "EGMSecurities-Demo"
+  path: "C:\\Program Files\\MetaTrader 5\\terminal64.exe"  # optional path to terminal64.exe on Windows
 
-# Trading timeframe for MT5-master parity mode (Mode B)
-# Example: "M15", "H1"
-timeframe: M15
+# Timeframe for parity engine and Binance candles (string, e.g. "15m", "1h")
+timeframe: "15m"
 
 # TradingView "tf" normalization expected (for Mode A tf match)
-# Example: "15m", "1h"
-expected_tv_tf: "15m"
+expected_tf: "15m"
+
+# Symbols from Binance / TradingView (BTCUSDT, etc.)
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+  - SOLUSDT
+  - PAXGUSDT
+  - XAGUSDT
 
 # Symbol mapping (TV/Binance -> MT5 symbol)
-# e.g. "BTCUSDT": "BTCUSD", "NAS100": "US100.cash"
+# Update these to your broker's exact MT5 symbol names.
 symbol_map:
-  # TradingView symbols map to MT5 .lv symbols for execution.
   BTCUSDT: BTCUSD.lv
-  BTCUSD.p: BTCUSD.lv
   ETHUSDT: ETHUSD.lv
-  ETHUSD.p: ETHUSD.lv
   SOLUSDT: SOLUSD.lv
-  SOLUSD.p: SOLUSD.lv
+  PAXGUSDT: XAUUSD
+  XAGUSDT: XAGUSD
   XAUUSD: XAUUSD
   XAGUSD: XAGUSD
 
-symbols:
-  - BTCUSD.lv
-  - ETHUSD.lv
-  - SOLUSD.lv
-  - XAUUSD
-  - XAGUSD
+binance:
+  venue: usdm   # spot | usdm
+  poll_seconds: 1.0
+  limit: 500
+  api_base: ""  # optional override
 
 strategy:
   donLen: 120
@@ -78,4 +81,22 @@ risk:
   tp_atr_mult: 3.0
   deviation: 20
   magic: 260110
-  comment: "TV/MT5 PineParity LONG"
+  comment: "TV/Binance PineParity LONG"
+
+telegram:
+  enabled: true
+  token: "8232911163:AAGxqJQsKD3wol6huAISPUcST_F2fY1u2G4"
+  chat_id: "5195322248"   # or negative for a group, e.g. "-100123..."
+  throttle_seconds: 20
+
+  notify_startup: true
+  notify_entry: true
+  notify_exits: true
+  notify_failures: true
+  notify_rejects: true
+  notify_stale_feed: true
+
+trade_tracker:
+  enabled: false
+  poll_seconds: 1.0
+  history_days: 7
